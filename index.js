@@ -265,7 +265,7 @@ start_vm = (
   };
   const result = spawnSync(
     "bash",
-    ["-c", `elixir --no-halt qemu.exs ${os} ${arch} ${filename} ${pubkey}`],
+    ["-c", `elixir --no-halt qemu_vm.exs ${os} ${arch} ${filename} ${pubkey}`],
     {
       stdio: "inherit",
       env: { ...process.env, ...env_vars },
