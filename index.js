@@ -3,6 +3,7 @@ const github = require("@actions/github");
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const expandHomeDir = require('expand-home-dir');
 
 show_message = (type, message) => {
   if (type == "error") {
@@ -224,11 +225,12 @@ download_file = (url, filename) => {
 };
 
 ensure_host_ssh_key = () => {
-  const pubkey = path.resolve('~', '.ssh', 'id_rsa.pub');
+  const pubkey = expandHomeDir('~/.ssh/id_rsa.pub');
+  const privkey = expandHomeDir('~/.ssh/id_rsa');
   if (fs.existsSync(pubkey)) {
     show_message("info", "SSH key already exists, skipping.");
   } else {
-    const result = spawnSync("ssh-keygen", ["-t", "rsa", "-N", "", "-f", "~/.ssh/id_rsa"], {
+    const result = spawnSync("ssh-keygen", ["-t", "rsa", "-N", "", "-f", privkey], {
       stdio: "inherit",
     });
     if (result.status === 0) {

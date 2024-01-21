@@ -5923,6 +5923,24 @@ exports.Deprecation = Deprecation;
 
 /***/ }),
 
+/***/ 5859:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var join = (__nccwpck_require__(1017).join);
+var homedir = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+
+module.exports = expandHomeDir;
+
+function expandHomeDir (path) {
+  if (!path) return path;
+  if (path == '~') return homedir;
+  if (path.slice(0, 2) != '~/') return path;
+  return join(homedir, path.slice(2));
+}
+
+
+/***/ }),
+
 /***/ 9729:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -30803,6 +30821,7 @@ const github = __nccwpck_require__(1511);
 const fs = __nccwpck_require__(7147);
 const path = __nccwpck_require__(1017);
 const { spawnSync } = __nccwpck_require__(2081);
+const expandHomeDir = __nccwpck_require__(5859);
 
 show_message = (type, message) => {
   if (type == "error") {
@@ -31024,11 +31043,12 @@ download_file = (url, filename) => {
 };
 
 ensure_host_ssh_key = () => {
-  const pubkey = path.resolve('~', '.ssh', 'id_rsa.pub');
+  const pubkey = expandHomeDir('~/.ssh/id_rsa.pub');
+  const privkey = expandHomeDir('~/.ssh/id_rsa');
   if (fs.existsSync(pubkey)) {
     show_message("info", "SSH key already exists, skipping.");
   } else {
-    const result = spawnSync("ssh-keygen", ["-t", "rsa", "-N", "", "-f", "~/.ssh/id_rsa"], {
+    const result = spawnSync("ssh-keygen", ["-t", "rsa", "-N", "", "-f", privkey], {
       stdio: "inherit",
     });
     if (result.status === 0) {
