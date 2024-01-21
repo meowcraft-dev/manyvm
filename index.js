@@ -223,6 +223,30 @@ download_file = (url, filename) => {
   }
 };
 
+start_vm = (erlang_version, elixir_version, qemu_version, os, arch, filename) => {
+  show_message("info", "Starting VM");
+  const env_vars = {
+    PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:/tmp/qemu-${qemu_version}/bin:${process.env.PATH}`,
+    ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`
+  };
+  const result = spawnSync(
+    "bash",
+    [
+      "-c",
+      `elixir -no-halt qemu.exs ${os} ${arch} ${filename}`,
+    ],
+    {
+      stdio: "inherit",
+      env: { ...process.env, ...env_vars }
+    }
+  );
+  if (result.status === 0) {
+    show_message("info", "VM started successfully.");
+  } else {
+    show_message("fatal", `Error starting VM. Exit code: ${result.status}`);
+  }
+};
+
 try {
   //   const os = core.getInput('os');
   //   const version = core.getInput('version');
@@ -260,6 +284,7 @@ try {
 
   show_message("info", `Downloading ${os} image from ${os_image_url}`);
   download_file(os_image_url, filename);
+  start_vm(erlang_version, elixir_version, qemu_version, os, arch, filename);
 } catch (error) {
   show_message("fatal", error.message);
 }
