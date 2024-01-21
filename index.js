@@ -98,7 +98,10 @@ setup_elixir = (elixir_version, erlang_version) => {
   );
 
   if (fs.existsSync(`/tmp/elixir-${elixir_version}/.extracted`)) {
-    show_message("info", `Elixir ${elixir_version} already extracted, skipping.`);
+    show_message(
+      "info",
+      `Elixir ${elixir_version} already extracted, skipping.`
+    );
   } else {
     show_message("info", `Extracting Elixir ${elixir_version}`);
     let result = spawnSync(
@@ -150,15 +153,12 @@ setup_elixir = (elixir_version, erlang_version) => {
       );
     }
   }
-  
+
   // mix local.hex --force && mix local.rebar --force
   show_message("info", `Installing Hex and Rebar`);
   let result = spawnSync(
     "bash",
-    [
-      "-c",
-      `mix local.hex --force && mix local.rebar --force`,
-    ],
+    ["-c", `mix local.hex --force && mix local.rebar --force`],
     {
       stdio: "inherit",
       env: { ...process.env, ...env_vars },
@@ -311,7 +311,10 @@ start_vm = (
   };
   const result = spawnSync(
     "bash",
-    ["-c", `elixir --no-halt qemu_vm.exs ${os} ${cpu} ${arch} ${bios} ${machine} ${filename} ${pubkey}`],
+    [
+      "-c",
+      `elixir --no-halt qemu_vm.exs ${os} ${cpu} ${arch} ${bios} ${machine} ${filename} ${pubkey}`,
+    ],
     {
       stdio: "inherit",
       env: { ...process.env, ...env_vars },
@@ -339,7 +342,14 @@ try {
 
   let filename = "";
 
-  let [os, version, arch, cpu, bios, machine] = ["freebsd", "latest", "amd64", "auto", "auto", "auto"];
+  let [os, version, arch, cpu, bios, machine] = [
+    "freebsd",
+    "latest",
+    "amd64",
+    "auto",
+    "auto",
+    "auto",
+  ];
   let os_image_url = "";
 
   if (os_image_url) {
@@ -359,8 +369,38 @@ try {
     show_message("info", `Using image URL: ${os_image_url}`);
   }
 
-  show_message("info", `Downloading ${os} image from ${os_image_url}`);
-  download_file(os_image_url, filename);
+  let uncompressed_filename = filename;
+  if (filename.endsWith(".xz")) {
+    uncompressed_filename = filename.replace(".xz", "");
+  }
+
+  if (fs.existsSync(uncompressed_filename)) {
+    show_message(
+      "info",
+      `Uncompressed image ${uncompressed_filename} already exists, skipping.`
+    );
+  } else {
+    if (fs.existsSync(filename)) {
+      show_message("info", `Image ${filename} already exists, skipping.`);
+    } else {
+      show_message("info", `Downloading ${os} image from ${os_image_url}`);
+      download_file(os_image_url, filename);
+    }
+
+    show_message("info", `Decompressing image`);
+    const result = spawnSync("bash", ["-c", `xz -d -k -T0 ${filename}`], {
+      stdio: "inherit",
+    });
+    if (result.status === 0) {
+      show_message("info", "Image decompressed successfully.");
+    } else {
+      show_message(
+        "fatal",
+        `Error decompressing image. Exit code: ${result.status}`
+      );
+    }
+  }
+
   let pubkey = ensure_host_ssh_key();
 
   if (cpu == "auto") {
