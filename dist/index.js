@@ -31115,7 +31115,9 @@ start_vm = (
   elixir_version,
   qemu_version,
   os,
+  cpu,
   arch,
+  bios,
   filename,
   pubkey
 ) => {
@@ -31126,7 +31128,7 @@ start_vm = (
   };
   const result = spawnSync(
     "bash",
-    ["-c", `elixir --no-halt qemu_vm.exs ${os} ${arch} ${filename} ${pubkey}`],
+    ["-c", `elixir --no-halt qemu_vm.exs ${os} ${cpu} ${arch} ${bios} ${filename} ${pubkey}`],
     {
       stdio: "inherit",
       env: { ...process.env, ...env_vars },
@@ -31154,7 +31156,7 @@ try {
 
   let filename = "";
 
-  let [os, version, arch] = ["freebsd", "latest", "amd64"];
+  let [os, version, arch, cpu, bios] = ["freebsd", "latest", "amd64", "auto", "auto"];
   let os_image_url = "";
 
   if (os_image_url) {
@@ -31177,12 +31179,51 @@ try {
   show_message("info", `Downloading ${os} image from ${os_image_url}`);
   download_file(os_image_url, filename);
   let pubkey = ensure_host_ssh_key();
+
+  if (cpu == "auto") {
+    switch (arch) {
+      case "amd64":
+      case "x86_64":
+      case "i386":
+        cpu = "qemu64";
+        break;
+      case "aarch64":
+        cpu = "cortex-a57";
+        break;
+      case "riscv64":
+        cpu = "sifive-u74";
+        break;
+      default:
+        show_message("fatal", `Unknown architecture: ${arch}`);
+    }
+  }
+  
+  if (bios == "auto") {
+    switch (arch) {
+      case "amd64":
+      case "x86_64":
+      case "i386":
+        bios = "ovmf";
+        break;
+      case "aarch64":
+        bios = "edk2-aarch64-code.fd";
+        break;
+      case "riscv64":
+        bios = "opensbi-riscv64-generic";
+        break;
+      default:
+        show_message("fatal", `Unknown architecture: ${arch}`);
+    }
+  }
+
   start_vm(
     erlang_version,
     elixir_version,
     qemu_version,
     os,
+    cpu,
     arch,
+    bios,
     filename,
     pubkey
   );
