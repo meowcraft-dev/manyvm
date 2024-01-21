@@ -223,7 +223,27 @@ download_file = (url, filename) => {
   }
 };
 
-start_vm = (erlang_version, elixir_version, qemu_version, os, arch, filename) => {
+ensure_host_ssh_key = () => {
+  const pubkey = path.resolve('~', '.ssh', 'id_rsa.pub');
+  if (fs.existsSync(pubkey)) {
+    show_message("info", "SSH key already exists, skipping.");
+  } else {
+    const result = spawnSync("ssh-keygen", ["-t", "rsa", "-N", "", "-f", "~/.ssh/id_rsa"], {
+      stdio: "inherit",
+    });
+    if (result.status === 0) {
+      show_message("info", "SSH key generated successfully.");
+    } else {
+      show_message(
+        "fatal",
+        `Error generating SSH key. Exit code: ${result.status}`
+      );
+    }
+  }
+  return pubkey;
+};
+
+start_vm = (erlang_version, elixir_version, qemu_version, os, arch, filename, pubkey) => {
   show_message("info", "Starting VM");
   const env_vars = {
     PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:/tmp/qemu-${qemu_version}/bin:${process.env.PATH}`,
@@ -233,7 +253,7 @@ start_vm = (erlang_version, elixir_version, qemu_version, os, arch, filename) =>
     "bash",
     [
       "-c",
-      `elixir -no-halt qemu.exs ${os} ${arch} ${filename}`,
+      `elixir --no-halt qemu.exs ${os} ${arch} ${filename} ${pubkey}`,
     ],
     {
       stdio: "inherit",
@@ -284,7 +304,8 @@ try {
 
   show_message("info", `Downloading ${os} image from ${os_image_url}`);
   download_file(os_image_url, filename);
-  start_vm(erlang_version, elixir_version, qemu_version, os, arch, filename);
+  let pubkey = ensure_host_ssh_key();
+  start_vm(erlang_version, elixir_version, qemu_version, os, arch, filename, pubkey);
 } catch (error) {
   show_message("fatal", error.message);
 }
