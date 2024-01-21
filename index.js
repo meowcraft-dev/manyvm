@@ -26,12 +26,13 @@ setup_precompiled_erlang = (version) => {
   } else if (operatingSystem === "win32") {
     show_message("fatal", "Windows is not supported yet.");
   } else if (operatingSystem === "darwin") {
-    // for macOS, it's possible to have two architectures in the future
-    // which are `x64` and `arm64` (from process.arch), so we need to pass the arch parameter
-    if (arch == "x64") {
-      arch = "x86_64";
-    }
-    download_precompiled_erlang("darwin", arch, version);
+    show_message("fatal", "macOS is not supported yet.");
+    // // for macOS, it's possible to have two architectures in the future
+    // // which are `x64` and `arm64` (from process.arch), so we need to pass the arch parameter
+    // if (arch == "x64") {
+    //   arch = "x86_64";
+    // }
+    // download_precompiled_erlang("darwin", arch, version);
   } else {
     show_message("fatal", `Unsupported operating system: ${operatingSystem}`);
   }
