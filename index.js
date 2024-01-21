@@ -126,6 +126,43 @@ setup_elixir = (elixir_version, erlang_version) => {
       env: { ...process.env, ...env_vars } 
     }
   );
+  if (result2.status === 0) {
+    show_message("info", `Elixir ${elixir_version} built successfully.`);
+  } else {
+    show_message(
+      "fatal",
+      `Error building Elixir ${elixir_version}. Exit code: ${result2.status}`
+    );
+  }
+};
+
+setup_precompiled_qemu = (version) => {
+  show_message("info", `Downloading QEMU ${version}`);
+  let triplet = "x86_64-linux-gnu";
+  let filename = `qemu-${triplet}.tar.gz`;
+  download_file(
+    `https://github.com/cocoa-xu/qemu-build/releases/download/v${version}/${filename}`,
+    `/tmp/qemu-${version}-${triplet}.tar.gz`
+  );
+  show_message("info", `Extracting QEMU ${version}`);
+  const result = spawnSync(
+    "bash",
+    [
+      "-c",
+      `mkdir -p /tmp/qemu-${version} && tar -C /tmp/qemu-${version} -xzf /tmp/qemu-${version}-${triplet}.tar.gz`,
+    ],
+    {
+      stdio: "inherit",
+    }
+  );
+  if (result.status === 0) {
+    show_message("info", `QEMU ${version} extracted successfully.`);
+  } else {
+    show_message(
+      "fatal",
+      `Error extracting QEMU ${version}. Exit code: ${result.status}`
+    );
+  }
 };
 
 get_freebsd_image_url_template = (version, arch) => {
@@ -194,8 +231,10 @@ try {
 
   const erlang_version = "26.2.1";
   const elixir_version = "1.16.0";
+  const qemu_version = "8.2.0";
   setup_precompiled_erlang(erlang_version);
   setup_elixir(elixir_version, erlang_version);
+  setup_precompiled_qemu(qemu_version);
 
   let filename = "";
 
