@@ -30,11 +30,14 @@ defmodule QemuVm do
 
   def handle_call(:start_vm, _from, %{status: :start_vm, opts: opts}) do
     os = opts[:os] || "freebsd"
+
     if os != "freebsd" do
       raise "Only FreeBSD is tested and support at the moment"
     end
+
     arch = opts[:arch] || "aarch64"
     image = opts[:image] || raise "no image specified"
+    pubkey = opts[:pubkey] || Path.expand("~/.ssh/id_rsa.pub")
     cpu = opts[:cpu] || "cortex-a57"
     smp = opts[:smp] || 4
     bios = opts[:bios] || "edk2-aarch64-code.fd"
@@ -44,7 +47,7 @@ defmodule QemuVm do
 
     {:ok, pty} =
       ExPTY.spawn(
-        "/usr/local/bin/qemu-system-#{arch}",
+        "qemu-system-#{arch}",
         ~w(-M #{machine} -m #{memory} -cpu #{cpu} -smp #{smp} -bios #{bios}
         -drive if=none,file=#{image},id=drv,format=#{format}
         -device virtio-blk-pci,drive=drv
@@ -59,7 +62,7 @@ defmodule QemuVm do
         on_exit: __MODULE__
       )
 
-    {:reply, :ok, %{pty: pty, lastline: ""}}
+    {:reply, :ok, %{pty: pty, lastline: "", pubkey: pubkey}}
   end
 
   @impl true
@@ -86,10 +89,11 @@ defmodule QemuVm do
     {:noreply, state}
   end
 
-  defp setup_ssh(%{pty: pty}) do
-    ssh_key = File.read!(Path.expand("~/.ssh/id_rsa.pub"))
+  defp setup_ssh(%{pty: pty, pubkey: pubkey}) do
+    ssh_key = File.read!(pubkey)
 
     :timer.sleep(1500)
+
     ExPTY.write(
       pty,
       "mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n"
@@ -122,7 +126,7 @@ defmodule QemuVm do
   end
 end
 
-[os, arch, image_file] = System.argv()
+[os, arch, image_file, pubkey] = System.argv()
 
 {:ok, freebsd} =
   GenServer.start_link(
@@ -131,8 +135,9 @@ end
       os: os,
       arch: arch,
       image: image_file,
+      pubkey: pubkey,
       ibaudrate: 38400,
-      obaudrate: 38400,
+      obaudrate: 38400
     ],
     name: QemuVm
   )
