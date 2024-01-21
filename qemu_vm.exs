@@ -119,7 +119,7 @@ defmodule QemuVm do
 
     ExPTY.write(
       pty,
-      "mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n"
+      "mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd start && /etc/rc.d/sshd restart\n"
     )
 
     :timer.sleep(100)
@@ -151,6 +151,11 @@ defmodule QemuVm do
     else
       {:noreply, %{state | lastline: "root@freebsd:~ # "}}
     end
+  end
+
+  defp handle_lastline("All buffers synced.", state) do
+    terminate(:normal, state)
+    :erlang.halt()
   end
 
   defp handle_lastline(lastline, state) do

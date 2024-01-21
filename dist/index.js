@@ -31139,7 +31139,7 @@ start_vm = (
     }
   );
   if (result.status === 0) {
-    show_message("info", "VM started successfully.");
+    show_message("info", "QEMU quit okay.");
   } else {
     show_message("fatal", `Error starting VM. Exit code: ${result.status}`);
   }
@@ -31263,7 +31263,7 @@ try {
         cpu = "cortex-a57";
         break;
       case "riscv64":
-        cpu = "sifive-u74";
+        cpu = "rv64";
         break;
       default:
         show_message("fatal", `Unknown architecture: ${arch}`);
