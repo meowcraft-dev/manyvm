@@ -20,6 +20,10 @@ inputs:
     description: 'Specify which BIOS to use'
     required: false
     default: 'auto'
+  machine:
+    description: 'Specify which machine to emulate'
+    required: false
+    default: 'auto'
   os_image_url:
     description: 'OS Image URL'
     required: false
