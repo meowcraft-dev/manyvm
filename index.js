@@ -134,7 +134,7 @@ setup_elixir = (elixir_version, erlang_version) => {
       "bash",
       [
         "-c",
-        `cd /tmp/elixir-${elixir_version} && make clean compile && /tmp/elixir-${elixir_version}/.built`,
+        `cd /tmp/elixir-${elixir_version} && make clean compile && touch /tmp/elixir-${elixir_version}/.built`,
       ],
       {
         stdio: "inherit",
