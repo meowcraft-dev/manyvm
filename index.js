@@ -327,11 +327,41 @@ start_vm = (
   }
 };
 
+ensure_install_ovmf = () => {
+  if (fs.existsSync("/usr/share/qemu/OVMF.fd")) {
+    show_message("info", "OVMF already installed, skipping.");
+  } else {
+    show_message("info", "Installing OVMF");
+    let result = spawnSync("sudo", ["apt-get", "update"], {
+      stdio: "inherit",
+      env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
+    });
+    if (result.status === 0) {
+      show_message("info", "OVMF installed successfully.");
+    } else {
+      show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
+    }
+    
+    result = spawnSync("sudo", ["apt-get", "-y", "install", "-no-install-recommends", "ovmf"], {
+      stdio: "inherit",
+      env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
+    });
+    if (result.status === 0) {
+      show_message("info", "OVMF installed successfully.");
+    } else {
+      show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
+    }
+  }
+};
+
 try {
-  //   const os = core.getInput('os');
-  //   const version = core.getInput('version');
-  //   const arch = core.getInput('arch');
-  //   let os_image_url = core.getInput('os_image_url');
+  const os = core.getInput('os');
+  const version = core.getInput('version');
+  const arch = core.getInput('arch');
+  const cpu = core.getInput('cpu');
+  const bios = core.getInput('bios');
+  const machine = core.getInput('machine');
+  let os_image_url = core.getInput('os_image_url');
 
   const erlang_version = "26.2.1";
   const elixir_version = "1.16.0";
@@ -342,15 +372,14 @@ try {
 
   let filename = "";
 
-  let [os, version, arch, cpu, bios, machine] = [
-    "freebsd",
-    "latest",
-    "amd64",
-    "auto",
-    "auto",
-    "auto",
-  ];
-  let os_image_url = "";
+  // let [os, version, arch, cpu, bios, machine] = [
+  //   "freebsd",
+  //   "latest",
+  //   "amd64",
+  //   "auto",
+  //   "auto",
+  //   "auto",
+  // ];
 
   if (os_image_url) {
     filename = get_filename_from_url(os_image_url);
@@ -428,6 +457,7 @@ try {
       case "amd64":
       case "x86_64":
       case "i386":
+        ensure_install_ovmf();
         bios = "/usr/share/qemu/OVMF.fd";
         break;
       case "aarch64":
