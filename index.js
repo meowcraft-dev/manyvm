@@ -246,7 +246,7 @@ ensure_host_ssh_key = () => {
 start_vm = (erlang_version, elixir_version, qemu_version, os, arch, filename, pubkey) => {
   show_message("info", "Starting VM");
   const env_vars = {
-    PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:/tmp/qemu-${qemu_version}/bin:${process.env.PATH}`,
+    PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:/tmp/qemu-${qemu_version}/usr/local/bin:${process.env.PATH}`,
     ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`
   };
   const result = spawnSync(
