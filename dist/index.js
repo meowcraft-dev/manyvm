@@ -31246,13 +31246,13 @@ try {
       case "amd64":
       case "x86_64":
       case "i386":
-        bios = "ovmf";
+        bios = "bios-256k.bin";
         break;
       case "aarch64":
         bios = "edk2-aarch64-code.fd";
         break;
       case "riscv64":
-        bios = "opensbi-riscv64-generic";
+        bios = "opensbi-riscv64-generic-fw_dynamic.bin";
         break;
       default:
         show_message("fatal", `Unknown architecture: ${arch}`);
