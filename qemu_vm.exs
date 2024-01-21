@@ -133,7 +133,7 @@ defmodule QemuVm do
   end
 end
 
-[os, cpu, arch, bios, image_file, pubkey] = System.argv()
+[os, cpu, arch, bios, machine, image_file, pubkey] = System.argv()
 
 arch =
   case arch do
@@ -155,6 +155,7 @@ arch =
       cpu: cpu,
       arch: arch,
       bios: bios,
+      machine: machine,
       image: image_file,
       pubkey: pubkey,
       ibaudrate: 38400,

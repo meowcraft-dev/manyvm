@@ -31118,6 +31118,7 @@ start_vm = (
   cpu,
   arch,
   bios,
+  machine,
   filename,
   pubkey
 ) => {
@@ -31128,7 +31129,7 @@ start_vm = (
   };
   const result = spawnSync(
     "bash",
-    ["-c", `elixir --no-halt qemu_vm.exs ${os} ${cpu} ${arch} ${bios} ${filename} ${pubkey}`],
+    ["-c", `elixir --no-halt qemu_vm.exs ${os} ${cpu} ${arch} ${bios} ${machine} ${filename} ${pubkey}`],
     {
       stdio: "inherit",
       env: { ...process.env, ...env_vars },
@@ -31156,7 +31157,7 @@ try {
 
   let filename = "";
 
-  let [os, version, arch, cpu, bios] = ["freebsd", "latest", "amd64", "auto", "auto"];
+  let [os, version, arch, cpu, bios, machine] = ["freebsd", "latest", "amd64", "auto", "auto", "auto"];
   let os_image_url = "";
 
   if (os_image_url) {
@@ -31197,7 +31198,7 @@ try {
         show_message("fatal", `Unknown architecture: ${arch}`);
     }
   }
-  
+
   if (bios == "auto") {
     switch (arch) {
       case "amd64":
@@ -31216,6 +31217,24 @@ try {
     }
   }
 
+  if (machine == "auto") {
+    switch (arch) {
+      case "amd64":
+      case "x86_64":
+      case "i386":
+        machine = "q35";
+        break;
+      case "aarch64":
+        machine = "virt,gic-version=2";
+        break;
+      case "riscv64":
+        machine = "virt";
+        break;
+      default:
+        show_message("fatal", `Unknown architecture: ${arch}`);
+    }
+  }
+
   start_vm(
     erlang_version,
     elixir_version,
@@ -31224,6 +31243,7 @@ try {
     cpu,
     arch,
     bios,
+    machine,
     filename,
     pubkey
   );
