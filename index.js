@@ -49,11 +49,16 @@ download_precompiled_erlang = (os, arch, version) => {
   download_file(erlang_url, `/tmp/${filename}`);
   show_message("info", `Extracting Erlang/OTP`);
 
+  if (fs.existsSync(`/tmp/otp-${version}/.extracted`)) {
+    show_message("info", `Erlang/OTP ${version} already extracted, skipping.`);
+    return;
+  }
+
   const result = spawnSync(
     "bash",
     [
       "-c",
-      `mkdir -p /tmp/otp-${version} && tar -C /tmp/otp-${version} -xzf /tmp/${filename}`,
+      `mkdir -p /tmp/otp-${version} && tar -C /tmp/otp-${version} -xzf /tmp/${filename} && touch /tmp/otp-${version}/.extracted`,
     ],
     {
       stdio: "inherit",
@@ -91,48 +96,80 @@ setup_elixir = (elixir_version, erlang_version) => {
     `https://github.com/elixir-lang/elixir/archive/refs/tags/v${elixir_version}.tar.gz`,
     `/tmp/elixir-${elixir_version}.tar.gz`
   );
-  show_message("info", `Extracting Elixir ${elixir_version}`);
-  const result = spawnSync(
-    "bash",
-    [
-      "-c",
-      `mkdir -p /tmp/elixir-${elixir_version} && tar -C /tmp/elixir-${elixir_version} -xzf /tmp/elixir-${elixir_version}.tar.gz --strip-components 1`,
-    ],
-    {
-      stdio: "inherit",
-    }
-  );
-  if (result.status === 0) {
-    show_message("info", `Elixir ${elixir_version} extracted successfully.`);
+
+  if (fs.existsSync(`/tmp/elixir-${elixir_version}/.extracted`)) {
+    show_message("info", `Elixir ${elixir_version} already extracted, skipping.`);
   } else {
-    show_message(
-      "fatal",
-      `Error extracting Elixir ${elixir_version}. Exit code: ${result.status}`
+    show_message("info", `Extracting Elixir ${elixir_version}`);
+    let result = spawnSync(
+      "bash",
+      [
+        "-c",
+        `mkdir -p /tmp/elixir-${elixir_version} && tar -C /tmp/elixir-${elixir_version} -xzf /tmp/elixir-${elixir_version}.tar.gz --strip-components 1 && touch /tmp/elixir-${elixir_version}/.extracted`,
+      ],
+      {
+        stdio: "inherit",
+      }
     );
+    if (result.status === 0) {
+      show_message("info", `Elixir ${elixir_version} extracted successfully.`);
+    } else {
+      show_message(
+        "fatal",
+        `Error extracting Elixir ${elixir_version}. Exit code: ${result.status}`
+      );
+    }
   }
 
-  show_message("info", `Building Elixir ${elixir_version}`);
   const env_vars = {
     PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:${process.env.PATH}`,
     ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`,
   };
-  const result2 = spawnSync(
+  if (fs.existsSync(`/tmp/elixir-${elixir_version}/.built`)) {
+    show_message("info", `Elixir ${elixir_version} already built, skipping.`);
+    return;
+  } else {
+    show_message("info", `Building Elixir ${elixir_version}`);
+    let result = spawnSync(
+      "bash",
+      [
+        "-c",
+        `cd /tmp/elixir-${elixir_version} && make clean compile && /tmp/elixir-${elixir_version}/.built`,
+      ],
+      {
+        stdio: "inherit",
+        env: { ...process.env, ...env_vars },
+      }
+    );
+    if (result.status === 0) {
+      show_message("info", `Elixir ${elixir_version} built successfully.`);
+    } else {
+      show_message(
+        "fatal",
+        `Error building Elixir ${elixir_version}. Exit code: ${result2.status}`
+      );
+    }
+  }
+  
+  // mix local.hex --force && mix local.rebar --force
+  show_message("info", `Installing Hex and Rebar`);
+  let result = spawnSync(
     "bash",
     [
       "-c",
-      `cd /tmp/elixir-${elixir_version} && make clean compile && mix local.hex --force && mix local.rebar --force`,
+      `mix local.hex --force && mix local.rebar --force`,
     ],
     {
       stdio: "inherit",
       env: { ...process.env, ...env_vars },
     }
   );
-  if (result2.status === 0) {
-    show_message("info", `Elixir ${elixir_version} built successfully.`);
+  if (result.status === 0) {
+    show_message("info", `Hex and Rebar installed successfully.`);
   } else {
     show_message(
       "fatal",
-      `Error building Elixir ${elixir_version}. Exit code: ${result2.status}`
+      `Error installing Hex and Rebar. Exit code: ${result.status}`
     );
   }
 };
@@ -145,12 +182,18 @@ setup_precompiled_qemu = (version) => {
     `https://github.com/cocoa-xu/qemu-build/releases/download/v${version}/${filename}`,
     `/tmp/qemu-${version}-${triplet}.tar.gz`
   );
+
+  if (fs.existsSync(`/tmp/qemu-${version}/.extracted`)) {
+    show_message("info", `QEMU ${version} already extracted, skipping.`);
+    return;
+  }
+
   show_message("info", `Extracting QEMU ${version}`);
   const result = spawnSync(
     "bash",
     [
       "-c",
-      `mkdir -p /tmp/qemu-${version} && tar -C /tmp/qemu-${version} -xzf /tmp/qemu-${version}-${triplet}.tar.gz`,
+      `mkdir -p /tmp/qemu-${version} && tar -C /tmp/qemu-${version} -xzf /tmp/qemu-${version}-${triplet}.tar.gz && touch /tmp/qemu-${version}/.extracted`,
     ],
     {
       stdio: "inherit",
