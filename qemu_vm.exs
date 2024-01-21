@@ -45,6 +45,7 @@ defmodule QemuVm do
     memory = opts[:m] || opts[:memory] || "2G"
     machine = opts[:M] || opts[:machine] || "virt,gic-version=2"
     qemu = System.find_executable("qemu-system-#{arch}")
+
     if qemu == nil do
       raise "Cannot find `qemu-system-#{arch}` on the system"
     else
@@ -133,6 +134,18 @@ defmodule QemuVm do
 end
 
 [os, arch, image_file, pubkey] = System.argv()
+
+arch =
+  case arch do
+    "amd64" ->
+      "x86_64"
+
+    "arm64" ->
+      "aarch64"
+
+    _ ->
+      arch
+  end
 
 {:ok, freebsd} =
   GenServer.start_link(
