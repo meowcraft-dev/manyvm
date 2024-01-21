@@ -369,6 +369,8 @@ try {
     show_message("info", `Using image URL: ${os_image_url}`);
   }
 
+  filename = path.resolve(process.cwd(), filename);
+
   let uncompressed_filename = filename;
   if (filename.endsWith(".xz")) {
     uncompressed_filename = filename.replace(".xz", "");
