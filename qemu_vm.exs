@@ -119,8 +119,20 @@ defmodule QemuVm do
 
     ExPTY.write(
       pty,
-      "mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n#{ssh_key}\nEOF\n"
+      "mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n"
     )
+
+    :timer.sleep(100)
+
+    chunk_size = 32 * 8
+
+    chunks(ssh_key, chunk_size)
+    |> Enum.each(fn chunk ->
+      ExPTY.write(pty, chunk)
+      :timer.sleep(10)
+    end)
+
+    ExPTY.write(pty, "\nEOF\n")
     {:noreply, %{pty: pty, lastline: "root@freebsd:~ # ", vm_ready: true}}
   end
 
@@ -143,6 +155,19 @@ defmodule QemuVm do
 
   defp handle_lastline(lastline, state) do
     {:noreply, %{state | lastline: lastline}}
+  end
+
+  def chunks(binary, n) do
+    do_chunks(binary, n, [])
+  end
+
+  defp do_chunks(binary, n, acc) when bit_size(binary) <= n do
+    Enum.reverse([binary | acc])
+  end
+
+  defp do_chunks(binary, n, acc) do
+    <<chunk::size(n), rest::bitstring>> = binary
+    do_chunks(rest, n, [<<chunk::size(n)>> | acc])
   end
 end
 
@@ -171,8 +196,8 @@ arch =
       machine: machine,
       image: image_file,
       pubkey: pubkey,
-      ibaudrate: 38400,
-      obaudrate: 38400
+      ibaudrate: 115200,
+      obaudrate: 115200
     ],
     name: QemuVm
   )

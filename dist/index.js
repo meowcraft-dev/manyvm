@@ -31246,7 +31246,7 @@ try {
       case "amd64":
       case "x86_64":
       case "i386":
-        bios = "bios-256k.bin";
+        bios = "/usr/share/qemu/OVMF.fd";
         break;
       case "aarch64":
         bios = "edk2-aarch64-code.fd";
@@ -31264,7 +31264,7 @@ try {
       case "amd64":
       case "x86_64":
       case "i386":
-        machine = "q35";
+        machine = "pc";
         break;
       case "aarch64":
         machine = "virt,gic-version=2";
