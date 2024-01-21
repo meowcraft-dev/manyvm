@@ -44,10 +44,16 @@ defmodule QemuVm do
     format = opts[:image_format] || List.last(String.split(image, "."))
     memory = opts[:m] || opts[:memory] || "2G"
     machine = opts[:M] || opts[:machine] || "virt,gic-version=2"
+    qemu = System.find_executable("qemu-system-#{arch}")
+    if qemu == nil do
+      raise "Cannot find `qemu-system-#{arch}` on the system"
+    else
+      IO.puts("Using qemu: #{qemu}")
+    end
 
     {:ok, pty} =
       ExPTY.spawn(
-        "qemu-system-#{arch}",
+        qemu,
         ~w(-M #{machine} -m #{memory} -cpu #{cpu} -smp #{smp} -bios #{bios}
         -drive if=none,file=#{image},id=drv,format=#{format}
         -device virtio-blk-pci,drive=drv
