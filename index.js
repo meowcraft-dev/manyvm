@@ -466,7 +466,7 @@ try {
     arch,
     bios,
     machine,
-    filename,
+    uncompressed_filename,
     pubkey
   );
 } catch (error) {
