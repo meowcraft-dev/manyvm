@@ -1,0 +1,23 @@
+name: 'Hello World'
+description: 'Greet someone and record the time'
+inputs:
+  os:
+    description: 'OS name'
+    required: true
+  version:
+    description: 'OS version'
+    required: true
+    default: 'latest'
+  arch:
+    description: 'CPU architecture'
+    required: false
+    default: 'x86_64'
+  os_image_url:
+    description: 'OS Image URL'
+    required: false
+outputs:
+  time:
+    description: 'The time we greeted you'
+runs:
+  using: 'node20'
+  main: 'index.js'
