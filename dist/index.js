@@ -30932,7 +30932,7 @@ setup_elixir = (elixir_version, erlang_version) => {
   show_message("info", `Building Elixir ${elixir_version}`);
   const env_vars = {
     PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:${process.env.PATH}`,
-    ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`
+    ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`,
   };
   const result2 = spawnSync(
     "bash",
@@ -30942,7 +30942,7 @@ setup_elixir = (elixir_version, erlang_version) => {
     ],
     {
       stdio: "inherit",
-      env: { ...process.env, ...env_vars } 
+      env: { ...process.env, ...env_vars },
     }
   );
   if (result2.status === 0) {
@@ -31043,14 +31043,18 @@ download_file = (url, filename) => {
 };
 
 ensure_host_ssh_key = () => {
-  const pubkey = expandHomeDir('~/.ssh/id_rsa.pub');
-  const privkey = expandHomeDir('~/.ssh/id_rsa');
+  const pubkey = expandHomeDir("~/.ssh/id_rsa.pub");
+  const privkey = expandHomeDir("~/.ssh/id_rsa");
   if (fs.existsSync(pubkey)) {
     show_message("info", "SSH key already exists, skipping.");
   } else {
-    const result = spawnSync("ssh-keygen", ["-t", "rsa", "-N", "", "-f", privkey], {
-      stdio: "inherit",
-    });
+    const result = spawnSync(
+      "ssh-keygen",
+      ["-t", "rsa", "-N", "", "-f", privkey],
+      {
+        stdio: "inherit",
+      }
+    );
     if (result.status === 0) {
       show_message("info", "SSH key generated successfully.");
     } else {
@@ -31063,21 +31067,26 @@ ensure_host_ssh_key = () => {
   return pubkey;
 };
 
-start_vm = (erlang_version, elixir_version, qemu_version, os, arch, filename, pubkey) => {
+start_vm = (
+  erlang_version,
+  elixir_version,
+  qemu_version,
+  os,
+  arch,
+  filename,
+  pubkey
+) => {
   show_message("info", "Starting VM");
   const env_vars = {
     PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:/tmp/qemu-${qemu_version}/usr/local/bin:${process.env.PATH}`,
-    ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`
+    ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`,
   };
   const result = spawnSync(
     "bash",
-    [
-      "-c",
-      `elixir --no-halt qemu.exs ${os} ${arch} ${filename} ${pubkey}`,
-    ],
+    ["-c", `elixir --no-halt qemu.exs ${os} ${arch} ${filename} ${pubkey}`],
     {
       stdio: "inherit",
-      env: { ...process.env, ...env_vars }
+      env: { ...process.env, ...env_vars },
     }
   );
   if (result.status === 0) {
@@ -31125,7 +31134,15 @@ try {
   show_message("info", `Downloading ${os} image from ${os_image_url}`);
   download_file(os_image_url, filename);
   let pubkey = ensure_host_ssh_key();
-  start_vm(erlang_version, elixir_version, qemu_version, os, arch, filename, pubkey);
+  start_vm(
+    erlang_version,
+    elixir_version,
+    qemu_version,
+    os,
+    arch,
+    filename,
+    pubkey
+  );
 } catch (error) {
   show_message("fatal", error.message);
 }
