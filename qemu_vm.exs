@@ -52,16 +52,32 @@ defmodule QemuVm do
       IO.puts("Using qemu: #{qemu}")
     end
 
-    {:ok, pty} =
-      ExPTY.spawn(
-        qemu,
+    qemu_argv =
+      if arch == "x86_64" do
+        ~w(-M #{machine} -m #{memory} -cpu #{cpu} -smp #{smp} -bios #{bios}
+        -drive if=virtio,file=#{image},id=drv,format=#{format}
+        -device virtio-rng-pci
+        -net nic,model=virtio,macaddr=52:54:00:00:00:01
+        -net user,hostfwd=tcp::22222-:22
+        -nographic
+        -display none
+        -nodefaults
+        -serial mon:stdio)
+      else
         ~w(-M #{machine} -m #{memory} -cpu #{cpu} -smp #{smp} -bios #{bios}
         -drive if=none,file=#{image},id=drv,format=#{format}
         -device virtio-blk-pci,drive=drv
         -device virtio-rng-pci
         -net nic,model=virtio,macaddr=52:54:00:00:00:01
         -net user,hostfwd=tcp::22222-:22
-        -nographic),
+        -nographic
+        -display none)
+      end
+
+    {:ok, pty} =
+      ExPTY.spawn(
+        qemu,
+        qemu_argv,
         on_data: fn _, _, data ->
           IO.binwrite(data)
           GenServer.cast(__MODULE__, {:message, data})
@@ -103,11 +119,8 @@ defmodule QemuVm do
 
     ExPTY.write(
       pty,
-      "mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n"
+      "mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n#{ssh_key}\nEOF\n"
     )
-
-    ExPTY.write(pty, ssh_key)
-    ExPTY.write(pty, "\nEOF\n")
     {:noreply, %{pty: pty, lastline: "root@freebsd:~ # ", vm_ready: true}}
   end
 
