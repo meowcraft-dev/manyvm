@@ -16,164 +16,6 @@ show_message = (type, message) => {
   }
 };
 
-setup_precompiled_erlang = (version) => {
-  const operatingSystem = process.platform;
-  let arch = process.arch;
-  if (operatingSystem === "linux") {
-    // for linux, there is only one possible architecture on GitHub Action
-    // which is x64, so we can ignore the arch parameter
-    // and pass x86_64 directly
-    download_precompiled_erlang("linux", "x86_64", version);
-  } else if (operatingSystem === "win32") {
-    show_message("fatal", "Windows is not supported yet.");
-  } else if (operatingSystem === "darwin") {
-    show_message("fatal", "macOS is not supported yet.");
-    // // for macOS, it's possible to have two architectures in the future
-    // // which are `x64` and `arm64` (from process.arch), so we need to pass the arch parameter
-    // if (arch == "x64") {
-    //   arch = "x86_64";
-    // }
-    // download_precompiled_erlang("darwin", arch, version);
-  } else {
-    show_message("fatal", `Unsupported operating system: ${operatingSystem}`);
-  }
-};
-
-download_precompiled_erlang = (os, arch, version) => {
-  let [erlang_url, filename] = get_precompiled_erlang_url_template(
-    os,
-    arch,
-    version
-  );
-  show_message("info", `Downloading Erlang/OTP image from ${erlang_url}`);
-  download_file(erlang_url, `/tmp/${filename}`);
-  show_message("info", `Extracting Erlang/OTP`);
-
-  if (fs.existsSync(`/tmp/otp-${version}/.extracted`)) {
-    show_message("info", `Erlang/OTP ${version} already extracted, skipping.`);
-    return;
-  }
-
-  const result = spawnSync(
-    "bash",
-    [
-      "-c",
-      `mkdir -p /tmp/otp-${version} && tar -C /tmp/otp-${version} -xzf /tmp/${filename} && touch /tmp/otp-${version}/.extracted`,
-    ],
-    {
-      stdio: "inherit",
-    }
-  );
-  if (result.status === 0) {
-    show_message("info", "Erlang/OTP extracted successfully.");
-  } else {
-    show_message(
-      "fatal",
-      `Error extracting Erlang/OTP. Exit code: ${result.status}`
-    );
-  }
-};
-
-get_precompiled_erlang_url_template = (os, arch, version) => {
-  let triplet = "";
-  if (os == "linux") {
-    triplet = `${arch}-linux-gnu`;
-  } else if (os == "darwin") {
-    triplet = `${arch}-apple-darwin`;
-  } else {
-    show_message("fatal", `Unsupported operating system: ${os}`);
-  }
-  let filename = `otp-${triplet}.tar.gz`;
-  return [
-    `https://github.com/cocoa-xu/otp-build/releases/download/v${version}/${filename}`,
-    filename,
-  ];
-};
-
-setup_elixir = (elixir_version, erlang_version) => {
-  show_message("info", `Downloading Elixir ${elixir_version}`);
-  download_file(
-    `https://github.com/elixir-lang/elixir/archive/refs/tags/v${elixir_version}.tar.gz`,
-    `/tmp/elixir-${elixir_version}.tar.gz`
-  );
-
-  if (fs.existsSync(`/tmp/elixir-${elixir_version}/.extracted`)) {
-    show_message(
-      "info",
-      `Elixir ${elixir_version} already extracted, skipping.`
-    );
-  } else {
-    show_message("info", `Extracting Elixir ${elixir_version}`);
-    let result = spawnSync(
-      "bash",
-      [
-        "-c",
-        `mkdir -p /tmp/elixir-${elixir_version} && tar -C /tmp/elixir-${elixir_version} -xzf /tmp/elixir-${elixir_version}.tar.gz --strip-components 1 && touch /tmp/elixir-${elixir_version}/.extracted`,
-      ],
-      {
-        stdio: "inherit",
-      }
-    );
-    if (result.status === 0) {
-      show_message("info", `Elixir ${elixir_version} extracted successfully.`);
-    } else {
-      show_message(
-        "fatal",
-        `Error extracting Elixir ${elixir_version}. Exit code: ${result.status}`
-      );
-    }
-  }
-
-  const env_vars = {
-    PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:${process.env.PATH}`,
-    ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`,
-  };
-  if (fs.existsSync(`/tmp/elixir-${elixir_version}/.built`)) {
-    show_message("info", `Elixir ${elixir_version} already built, skipping.`);
-    return;
-  } else {
-    show_message("info", `Building Elixir ${elixir_version}`);
-    let result = spawnSync(
-      "bash",
-      [
-        "-c",
-        `cd /tmp/elixir-${elixir_version} && make clean compile && touch /tmp/elixir-${elixir_version}/.built`,
-      ],
-      {
-        stdio: "inherit",
-        env: { ...process.env, ...env_vars },
-      }
-    );
-    if (result.status === 0) {
-      show_message("info", `Elixir ${elixir_version} built successfully.`);
-    } else {
-      show_message(
-        "fatal",
-        `Error building Elixir ${elixir_version}. Exit code: ${result2.status}`
-      );
-    }
-  }
-
-  // mix local.hex --force && mix local.rebar --force
-  show_message("info", `Installing Hex and Rebar`);
-  let result = spawnSync(
-    "bash",
-    ["-c", `mix local.hex --force && mix local.rebar --force`],
-    {
-      stdio: "inherit",
-      env: { ...process.env, ...env_vars },
-    }
-  );
-  if (result.status === 0) {
-    show_message("info", `Hex and Rebar installed successfully.`);
-  } else {
-    show_message(
-      "fatal",
-      `Error installing Hex and Rebar. Exit code: ${result.status}`
-    );
-  }
-};
-
 setup_precompiled_qemu = (version) => {
   show_message("info", `Downloading QEMU ${version}`);
   let triplet = "x86_64-linux-gnu";
@@ -293,8 +135,6 @@ ensure_host_ssh_key = () => {
 };
 
 start_vm = (
-  erlang_version,
-  elixir_version,
   qemu_version,
   os,
   cpu,
@@ -306,9 +146,10 @@ start_vm = (
 ) => {
   show_message("info", "Starting VM");
   const env_vars = {
-    PATH: `/tmp/otp-${erlang_version}/usr/local/bin:/tmp/elixir-${elixir_version}/bin:/tmp/qemu-${qemu_version}/usr/local/bin:${process.env.PATH}`,
-    ERL_ROOTDIR: `/tmp/otp-${erlang_version}/usr/local/lib/erlang`,
+    PATH: `/tmp/qemu-${qemu_version}/usr/local/bin:${process.env.PATH}`,
   };
+
+  // TODO: use bash script
   const result = spawnSync(
     "bash",
     [
@@ -363,11 +204,7 @@ try {
   const machine = core.getInput('machine');
   let os_image_url = core.getInput('os_image_url');
 
-  const erlang_version = "26.2.1";
-  const elixir_version = "1.16.0";
   const qemu_version = "8.2.0";
-  setup_precompiled_erlang(erlang_version);
-  setup_elixir(elixir_version, erlang_version);
   setup_precompiled_qemu(qemu_version);
 
   let filename = "";
@@ -490,8 +327,6 @@ try {
   }
 
   start_vm(
-    erlang_version,
-    elixir_version,
     qemu_version,
     os,
     cpu,
