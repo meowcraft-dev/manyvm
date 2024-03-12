@@ -16,7 +16,6 @@ show_message = (type, message) => {
   }
 };
 
-
 setup_precompiled_qemu = (version) => {
   show_message("info", `Downloading QEMU ${version}`);
   let triplet = "x86_64-linux-gnu";
@@ -135,6 +134,32 @@ ensure_host_ssh_key = () => {
   return pubkey;
 };
 
+qemu_wrapper = (qemu_cmd, qemu_args, ready_callback) => {
+  show_message("info", 'starting qemu process with command: ' + qemu_cmd + ' ' + qemu_args.join(' '));
+  const qemuProcess = spawn(qemu_cmd, qemu_args);
+
+  let waitForLogin = (() => {
+      let concat = ''
+      return (data) => {
+          concat += data.toString()
+          if (concat.includes('login')) {
+              ready_callback(qemuProcess)
+              waitForLogin = () => { }
+          }
+      }
+  })()
+
+  qemuProcess.stdout.on('data', (data) => {
+      waitForLogin(data)
+  });
+
+  qemuProcess.on('close', (code) => {
+    show_message("info", `qemu exited with code ${code}`);
+  });
+
+  return qemuProcess;
+}
+
 start_vm = (
   qemu_version,
   os,
@@ -145,24 +170,83 @@ start_vm = (
   filename,
   pubkey
 ) => {
+  core.startGroup("Start VM");
   show_message("info", "Starting VM");
-  const env_vars = {
-    PATH: `/tmp/qemu-${qemu_version}/usr/local/bin:${process.env.PATH}`,
-  };
-  const result = spawnSync(
-    "bash",
-    [
-    ],
-    {
-      stdio: "inherit",
-      env: { ...process.env, ...env_vars },
-    }
-  );
-  if (result.status === 0) {
-    show_message("info", "QEMU quit okay.");
-  } else {
-    show_message("fatal", `Error starting VM. Exit code: ${result.status}`);
+
+  const qemu_executable = `/tmp/qemu-${qemu_version}/usr/local/bin/qemu-system-${arch}`;
+  let qemu_args = [];
+  switch (arch) {
+    case "amd64":
+    case "x86_64":
+    case "i386":
+      qemu_args = [
+        "-machine", machine,
+        "-cpu", cpu,
+        "-smp", "4",
+        "-bios", bios,
+        "-m", "2048",
+        "-nographic",
+        "-drive", `file=${filename},format=qcow2`,
+        "-netdev", `user,id=net0,hostfwd=tcp::2222-:22`,
+        "-device", "virtio-net-pci,netdev=net0"
+      ];
+      break;
+    case "aarch64":
+      qemu_args = [
+        "-machine", machine,
+        "-cpu", cpu,
+        "-smp", "4",
+        "-bios", bios,
+        "-m", "2048",
+        "-nographic",
+        "-drive", `file=${filename},format=qcow2`,
+        "-netdev", `user,id=net0,hostfwd=tcp::2222-:22`,
+        "-device", "virtio-net-pci,netdev=net0"
+      ];
+      break;
+    case "riscv64":
+      qemu_args = [
+        "-machine", machine,
+        "-cpu", cpu,
+        "-bios", bios,
+        "-m", "2048",
+        "-nographic",
+        "-drive", `file=${filename},format=qcow2`,
+        "-netdev", `user,id=net0,hostfwd=tcp::2222-:22`,
+        "-device", "virtio-net-pci,netdev=net0"
+      ];
+      break;
   }
+  
+  qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
+    let ssh_ready = false;
+    let do_ssh_callback = () => {
+      qemu_executable.stdin.write("mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd start && /etc/rc.d/sshd restart\n");
+      qemu_executable.stdin.write(pubkey + "\nEOF\n");
+    };
+
+    let waitForPrompt = (() => {
+      let concat = ''
+      return (data) => {
+        concat += data.toString()
+        if (concat.includes('root@freebsd:~ #')) {
+          if (!ssh_ready) {
+            ssh_ready = true;
+            do_ssh_callback();
+          } else {
+            show_message("info", "SSH okay. VM is ready to use.");
+            waitForLogin = () => { }
+          }
+        }
+      }
+    })()
+
+    qemu_process.stdout.on('data', (data) => {
+      waitForPrompt(data)
+    });
+    qemu_process.stdin.write('root\n')
+  });
+  core.endGroup();
 };
 
 ensure_install_ovmf = () => {
@@ -201,9 +285,15 @@ try {
   const machine = core.getInput('machine');
   let os_image_url = core.getInput('os_image_url');
 
+  // await shell("bash run.sh onStarted" );
+  //   core.endGroup();
+
+  core.startGroup("Set up QEMU");
   const qemu_version = "8.2.0";
   setup_precompiled_qemu(qemu_version);
+  core.endGroup();
 
+  core.startGroup("Download system image");
   let filename = "";
 
   // let [os, version, arch, cpu, bios, machine] = [
@@ -265,9 +355,10 @@ try {
       );
     }
   }
+  core.endGroup();
 
+  core.startGroup("Prepare VM");
   let pubkey = ensure_host_ssh_key();
-
   if (cpu == "auto") {
     switch (arch) {
       case "amd64":
@@ -276,7 +367,7 @@ try {
         cpu = "qemu64";
         break;
       case "aarch64":
-        cpu = "cortex-a57";
+        cpu = "cortex-a72";
         break;
       case "riscv64":
         cpu = "rv64";
@@ -322,6 +413,7 @@ try {
         show_message("fatal", `Unknown architecture: ${arch}`);
     }
   }
+  core.endGroup();
 
   start_vm(
     qemu_version,
@@ -333,6 +425,7 @@ try {
     uncompressed_filename,
     pubkey
   );
+  
 } catch (error) {
   show_message("fatal", error.message);
 }
