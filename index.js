@@ -5,7 +5,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const expandHomeDir = require("expand-home-dir");
 
-show_message = (type, message) => {
+function show_message(type, message) {
   if (type == "error") {
     core.setFailed(message);
   } else if (type == "fatal") {
@@ -16,7 +16,7 @@ show_message = (type, message) => {
   }
 };
 
-setup_precompiled_qemu = (version) => {
+function setup_precompiled_qemu(version) {
   show_message("info", `Downloading QEMU ${version}`);
   let triplet = "x86_64-linux-gnu";
   let filename = `qemu-${triplet}.tar.gz`;
@@ -51,7 +51,7 @@ setup_precompiled_qemu = (version) => {
   }
 };
 
-get_freebsd_image_url_template = (version, arch) => {
+function get_freebsd_image_url_template(version, arch) {
   version == "latest" && (version = "14.0");
   let [base_url, subdir] = ["14.0", "13.2", "12.4"].includes(version)
     ? [
@@ -84,7 +84,7 @@ get_freebsd_image_url_template = (version, arch) => {
   ];
 };
 
-get_filename_from_url = (url) => {
+function get_filename_from_url(url) {
   const parsed_url = new URL(url);
   const pathname = parsed_url.pathname;
   return path.basename(pathname);
@@ -109,7 +109,7 @@ download_file = (url, filename) => {
   }
 };
 
-ensure_host_ssh_key = () => {
+function ensure_host_ssh_key() {
   const pubkey = expandHomeDir("~/.ssh/id_rsa.pub");
   const privkey = expandHomeDir("~/.ssh/id_rsa");
   if (fs.existsSync(pubkey)) {
@@ -134,7 +134,7 @@ ensure_host_ssh_key = () => {
   return pubkey;
 };
 
-qemu_wrapper = (qemu_cmd, qemu_args, ready_callback) => {
+function qemu_wrapper(qemu_cmd, qemu_args, ready_callback) {
   show_message("info", 'starting qemu process with command: ' + qemu_cmd + ' ' + qemu_args.join(' '));
   const qemuProcess = spawn(qemu_cmd, qemu_args);
 
@@ -160,16 +160,7 @@ qemu_wrapper = (qemu_cmd, qemu_args, ready_callback) => {
   return qemuProcess;
 }
 
-start_vm = (
-  qemu_version,
-  os,
-  cpu,
-  arch,
-  bios,
-  machine,
-  filename,
-  pubkey
-) => {
+function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) {
   core.startGroup("Start VM");
   show_message("info", "Starting VM");
 
@@ -249,7 +240,7 @@ start_vm = (
   core.endGroup();
 };
 
-ensure_install_ovmf = () => {
+function ensure_install_ovmf() {
   if (fs.existsSync("/usr/share/qemu/OVMF.fd")) {
     show_message("info", "OVMF already installed, skipping.");
   } else {
