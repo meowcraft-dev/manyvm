@@ -257,7 +257,7 @@ function ensure_install_ovmf() {
       show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
     }
     
-    result = spawnSync("sudo", ["apt-get", "-y", "install", "-no-install-recommends", "ovmf"], {
+    result = spawnSync("sudo", ["apt-get", "--no-install-recommends", "-y", "install", "ovmf"], {
       stdio: "inherit",
       env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
     });
