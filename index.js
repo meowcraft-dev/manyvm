@@ -257,7 +257,7 @@ function ensure_install_ovmf() {
       show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
     }
     
-    result = spawnSync("sudo", ["apt-get", "-y", "install", "-no-install-recommends", "ovmf"], {
+    result = spawnSync("sudo", ["apt-get", "-y", "install", "ovmf"], {
       stdio: "inherit",
       env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
     });
@@ -270,12 +270,12 @@ function ensure_install_ovmf() {
 };
 
 try {
-  const os = core.getInput('os');
-  const version = core.getInput('version');
-  const arch = core.getInput('arch');
-  const cpu = core.getInput('cpu');
-  const bios = core.getInput('bios');
-  const machine = core.getInput('machine');
+  let os = core.getInput('os');
+  let version = core.getInput('version');
+  let arch = core.getInput('arch');
+  let cpu = core.getInput('cpu');
+  let bios = core.getInput('bios');
+  let machine = core.getInput('machine');
   let os_image_url = core.getInput('os_image_url');
 
   // await shell("bash run.sh onStarted" );
