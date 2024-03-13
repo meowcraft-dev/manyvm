@@ -1,5 +1,5 @@
-name: 'Hello World'
-description: 'Greet someone and record the time'
+name: 'ManyVM'
+description: 'Run many different VMs in different CPU architectures'
 inputs:
   os:
     description: 'OS name'
@@ -27,9 +27,9 @@ inputs:
   os_image_url:
     description: 'OS Image URL'
     required: false
-outputs:
-  time:
-    description: 'The time we greeted you'
+  run:
+    description: 'Run commands in VM'
+    required: true
 runs:
   using: 'node20'
   main: 'dist/index.js'

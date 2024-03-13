@@ -208,35 +208,37 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
       ];
       break;
   }
-  
-  qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
-    let ssh_ready = false;
-    let do_ssh_callback = () => {
-      qemu_executable.stdin.write("mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd start && /etc/rc.d/sshd restart\n");
-      qemu_executable.stdin.write(pubkey + "\nEOF\n");
-    };
 
-    let waitForPrompt = (() => {
-      let concat = ''
-      return (data) => {
-        concat += data.toString()
-        if (concat.includes('root@freebsd:~ #')) {
-          if (!ssh_ready) {
-            ssh_ready = true;
-            do_ssh_callback();
-          } else {
-            show_message("info", "SSH okay. VM is ready to use.");
-            waitForLogin = () => { }
-          }
-        }
-      }
-    })()
+  show_message("info", qemu_executable + ' ' + qemu_args.join(' '));
 
-    qemu_process.stdout.on('data', (data) => {
-      waitForPrompt(data)
-    });
-    qemu_process.stdin.write('root\n')
-  });
+  // qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
+  //   let ssh_ready = false;
+  //   let do_ssh_callback = () => {
+  //     qemu_executable.stdin.write("mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd start && /etc/rc.d/sshd restart\n");
+  //     qemu_executable.stdin.write(pubkey + "\nEOF\n");
+  //   };
+
+  //   let waitForPrompt = (() => {
+  //     let concat = ''
+  //     return (data) => {
+  //       concat += data.toString()
+  //       if (concat.includes('root@freebsd:~ #')) {
+  //         if (!ssh_ready) {
+  //           ssh_ready = true;
+  //           do_ssh_callback();
+  //         } else {
+  //           show_message("info", "SSH okay. VM is ready to use.");
+  //           waitForLogin = () => { }
+  //         }
+  //       }
+  //     }
+  //   })()
+
+  //   qemu_process.stdout.on('data', (data) => {
+  //     waitForPrompt(data)
+  //   });
+  //   qemu_process.stdin.write('root\n')
+  // });
   core.endGroup();
 };
 

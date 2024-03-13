@@ -1,0 +1,20 @@
+name: test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./
+        with:
+          os: freebsd
+          cpu: qemu64
+          arch: x86_64
+          version: "14.0"
+          run: |
+            echo "Hello World" > foo
+            echo "More hello" > bar
+            # comment
+            cat foo
+            head bar
