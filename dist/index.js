@@ -30925,7 +30925,7 @@ function setup_precompiled_qemu(version) {
     "bash",
     [
       "-c",
-      `mkdir -p /tmp/qemu-${version} && tar -C /tmp/qemu-${version} -xzf /tmp/qemu-${version}-${triplet}.tar.xz && touch /tmp/qemu-${version}/.extracted`,
+      `mkdir -p /tmp/qemu-${version} && tar -C /tmp/qemu-${version} -xf /tmp/qemu-${version}-${triplet}.tar.xz && touch /tmp/qemu-${version}/.extracted`,
     ],
     {
       stdio: "inherit",
