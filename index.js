@@ -346,7 +346,7 @@ try {
   core.endGroup();
 
   core.startGroup("Prepare VM");
-  ensure_install_ovmf();
+  ensure_install_deps();
   let pubkey = ensure_host_ssh_key();
   if (cpu == "auto") {
     switch (arch) {
