@@ -211,8 +211,8 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
     let ssh_ready = false;
     let do_ssh_callback = () => {
-      qemu_executable.stdin.write("mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd start && /etc/rc.d/sshd restart\n");
-      qemu_executable.stdin.write(pubkey + "\nEOF\n");
+      qemu_process.stdin.write("mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd start && /etc/rc.d/sshd restart\n");
+      qemu_process.stdin.write(pubkey + "\nEOF\n");
     };
 
     let waitForPrompt = (() => {
