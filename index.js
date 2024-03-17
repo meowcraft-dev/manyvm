@@ -53,33 +53,28 @@ function setup_precompiled_qemu(version) {
 
 function get_freebsd_image_url_template(version, arch) {
   version == "latest" && (version = "14.0");
-  let [base_url, subdir] = ["14.0", "13.2", "12.4"].includes(version)
-    ? [
-        `https://download.freebsd.org/releases/VM-IMAGES/${version}-RELEASE`,
-        "Latest",
-      ]
-    : [
-        `http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/old-releases/VM-IMAGES/${version}-RELEASE`,
-        "",
-      ];
+  if(!["14.0", "13.2", "12.4"].includes(version)) {
+    throw new Error(`Unsupported FreeBSD version: ${version}`);
+  }
+  let base_url = `https://github.com/uwulab/manyvm-freebsd-builder/releases/download/v${version}`
 
-  let [url_arch, os_arch, instruction_set] =
+  let [os_arch, instruction_set] =
     {
-      amd64: ["amd64", "", "amd64"],
-      x86_64: ["amd64", "", "amd64"],
-      i386: ["i386", "", "i386"],
-      aarch64: ["aarch64", "arm64", "aarch64"],
-      riscv64: ["riscv64", "riscv", "riscv64"],
+      amd64: ["", "amd64"],
+      x86_64: ["", "amd64"],
+      i386: ["", "i386"],
+      aarch64: ["arm64", "aarch64"],
+      riscv64: ["riscv", "riscv64"],
     }[arch] ||
     (() => {
       throw new Error(`Unknown architecture: ${arch}`);
     })();
 
-  let filename = `FreeBSD-${version}-RELEASE-${
+  let filename = `manyvm-FreeBSD-${version}-RELEASE-${
     !os_arch ? "" : `${os_arch}-`
   }${instruction_set}.qcow2.xz`;
   return [
-    `${base_url}/${url_arch}/${!subdir ? "" : `${subdir}/`}${filename}`,
+    `${base_url}/${filename}`,
     filename,
   ];
 };
@@ -164,7 +159,7 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   core.startGroup("Start VM");
   show_message("info", "Starting VM");
 
-  const qemu_executable = `/tmp/qemu-${qemu_version}/bin/qemu-system-${arch}`;
+  const qemu_executable = `/tmp/qemu-${qemu_version}/usr/local/bin/qemu-system-${arch}`;
   let qemu_args = [];
   switch (arch) {
     case "amd64":
@@ -315,7 +310,7 @@ try {
     show_message("info", `Using image URL: ${os_image_url}`);
   }
 
-  filename = path.resolve(process.cwd(), filename);
+  filename = path.resolve(`${process.cwd()}/${filename}`);
 
   let uncompressed_filename = filename;
   if (filename.endsWith(".xz")) {
