@@ -144,6 +144,8 @@ function qemu_wrapper(qemu_cmd, qemu_args, ready_callback) {
       }
   })()
 
+  qemuProcess.stderr.pipe(process.stderr)
+
   qemuProcess.stdout.on('data', (data) => {
       waitForLogin(data)
   });
@@ -237,30 +239,28 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   core.endGroup();
 };
 
-function ensure_install_ovmf() {
-  if (fs.existsSync("/usr/share/qemu/OVMF.fd")) {
-    show_message("info", "OVMF already installed, skipping.");
+function ensure_install_deps() {
+  show_message("info", "Installing OVMF");
+  let result = spawnSync("sudo", ["apt-get", "update"], {
+    stdio: "inherit",
+    env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
+  });
+  if (result.status === 0) {
+    show_message("info", "OVMF installed successfully.");
   } else {
-    show_message("info", "Installing OVMF");
-    let result = spawnSync("sudo", ["apt-get", "update"], {
-      stdio: "inherit",
-      env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
-    });
-    if (result.status === 0) {
-      show_message("info", "OVMF installed successfully.");
-    } else {
-      show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
-    }
-    
-    result = spawnSync("sudo", ["apt-get", "-y", "install", "ovmf"], {
-      stdio: "inherit",
-      env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
-    });
-    if (result.status === 0) {
-      show_message("info", "OVMF installed successfully.");
-    } else {
-      show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
-    }
+    show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
+  }
+
+  const deps = "libxml2-utils xsltproc libglib2.0-dev gnutls-dev libslirp-dev libyajl-dev meson libosinfo-1.0-dev libcurl4-openssl-dev libreadline-dev libnl-3-dev libudev-dev flex libnfs-dev libssh-dev libssh2-1-dev libpng-dev libusb-dev libsnappy-dev libsdl2-dev libpam0g-dev libbz2-dev liblzma-dev libzstd-dev libcap-ng-dev libjpeg-dev libvde-dev libvdeplug-dev liblzo2-dev ovmf"
+  
+  result = spawnSync("sudo", ["apt-get", "-y", "install", ...deps.split(' ')], {
+    stdio: "inherit",
+    env: { ...process.env, DEBIAN_FRONTEND: "noninteractive" },
+  });
+  if (result.status === 0) {
+    show_message("info", "OVMF installed successfully.");
+  } else {
+    show_message("fatal", `Error installing OVMF. Exit code: ${result.status}`);
   }
 };
 
@@ -346,6 +346,7 @@ try {
   core.endGroup();
 
   core.startGroup("Prepare VM");
+  ensure_install_ovmf();
   let pubkey = ensure_host_ssh_key();
   if (cpu == "auto") {
     switch (arch) {
@@ -370,7 +371,6 @@ try {
       case "amd64":
       case "x86_64":
       case "i386":
-        ensure_install_ovmf();
         bios = "/usr/share/qemu/OVMF.fd";
         break;
       case "aarch64":
