@@ -134,6 +134,32 @@ function ensure_host_ssh_key() {
   return pubkey;
 };
 
+function qemu_wrapper(qemu_cmd, qemu_args, ready_callback) {
+  show_message("info", 'starting qemu process with command: ' + qemu_cmd + ' ' + qemu_args.join(' '));
+  const qemuProcess = spawn(qemu_cmd, qemu_args);
+
+  let waitForLogin = (() => {
+      let concat = ''
+      return (data) => {
+          concat += data.toString()
+          if (concat.includes('login')) {
+              ready_callback(qemuProcess)
+              waitForLogin = () => { }
+          }
+      }
+  })()
+
+  qemuProcess.stdout.on('data', (data) => {
+      waitForLogin(data)
+  });
+
+  qemuProcess.on('close', (code) => {
+    show_message("info", `qemu exited with code ${code}`);
+  });
+
+  return qemuProcess;
+}
+
 function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) {
   core.startGroup("Start VM");
   show_message("info", "Starting VM");
