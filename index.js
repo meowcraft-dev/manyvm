@@ -90,7 +90,7 @@ function get_filename_from_url(url) {
   return path.basename(pathname);
 };
 
-download_file = (url, filename) => {
+function download_file(url, filename) {
   if (fs.existsSync(filename)) {
     show_message("info", `File ${filename} already exists, skipping.`);
     return;
@@ -134,37 +134,11 @@ function ensure_host_ssh_key() {
   return pubkey;
 };
 
-function qemu_wrapper(qemu_cmd, qemu_args, ready_callback) {
-  show_message("info", 'starting qemu process with command: ' + qemu_cmd + ' ' + qemu_args.join(' '));
-  const qemuProcess = spawn(qemu_cmd, qemu_args);
-
-  let waitForLogin = (() => {
-      let concat = ''
-      return (data) => {
-          concat += data.toString()
-          if (concat.includes('login')) {
-              ready_callback(qemuProcess)
-              waitForLogin = () => { }
-          }
-      }
-  })()
-
-  qemuProcess.stdout.on('data', (data) => {
-      waitForLogin(data)
-  });
-
-  qemuProcess.on('close', (code) => {
-    show_message("info", `qemu exited with code ${code}`);
-  });
-
-  return qemuProcess;
-}
-
 function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) {
   core.startGroup("Start VM");
   show_message("info", "Starting VM");
 
-  const qemu_executable = `/tmp/qemu-${qemu_version}/usr/local/bin/qemu-system-${arch}`;
+  const qemu_executable = `/tmp/qemu-${qemu_version}/bin/qemu-system-${arch}`;
   let qemu_args = [];
   switch (arch) {
     case "amd64":
