@@ -216,6 +216,10 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
     ssh.stdout.pipe(process.stdout);
     ssh.stdin.write('chmod +x /tmp/run.sh');
     ssh.stdin.write('bash /tmp/run.sh');
+    ssh.on('close', (code) => {
+      show_message("info", `ssh exited with code ${code}`);
+      qemu_process.kill();
+    })
   });
   core.endGroup();
 };
