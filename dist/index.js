@@ -31099,32 +31099,13 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   show_message("info", qemu_executable + ' ' + qemu_args.join(' '));
 
   qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
-    let ssh_ready = false;
-    let do_ssh_callback = () => {
-      qemu_process.stdin.write("mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys <<EOF && chmod 600 ~/.ssh/authorized_keys && echo 'sshd_enable=\"YES\"' >> /etc/rc.conf && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd start && /etc/rc.d/sshd restart\n");
-      qemu_process.stdin.write(pubkey + "\nEOF\n");
-    };
-
-    let waitForPrompt = (() => {
-      let concat = ''
-      return (data) => {
-        concat += data.toString()
-        if (concat.includes('root@freebsd:~ #')) {
-          if (!ssh_ready) {
-            ssh_ready = true;
-            do_ssh_callback();
-          } else {
-            show_message("info", "SSH okay. VM is ready to use.");
-            waitForLogin = () => { }
-          }
-        }
-      }
-    })()
-
-    qemu_process.stdout.on('data', (data) => {
-      waitForPrompt(data)
-    });
-    qemu_process.stdin.write('root\n')
+    let runScript = core.getInput('run');
+    fs.writeFileSync('/tmp/run.sh', runScript);
+    spawnSync('scp', ['-o', 'StrictHostKeyChecking=no', '-i', pubkey, '-p', '2222', '/tmp/run.sh', 'root@localhost:/tmp/run.sh']);
+    let ssh = spawn('ssh', ['-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
+    ssh.stdout.pipe(process.stdout);
+    ssh.stdin.write('chmod +x /tmp/run.sh');
+    ssh.stdin.write('bash /tmp/run.sh');
   });
   core.endGroup();
 };
