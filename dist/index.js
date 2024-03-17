@@ -30892,7 +30892,7 @@ const core = __nccwpck_require__(3877);
 const github = __nccwpck_require__(5585);
 const fs = __nccwpck_require__(7147);
 const path = __nccwpck_require__(1017);
-const { spawnSync } = __nccwpck_require__(2081);
+const { spawnSync, spawn } = __nccwpck_require__(2081);
 const expandHomeDir = __nccwpck_require__(3839);
 
 function show_message(type, message) {

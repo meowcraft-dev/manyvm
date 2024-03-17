@@ -2,7 +2,7 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const fs = require("fs");
 const path = require("path");
-const { spawnSync } = require("child_process");
+const { spawnSync, spawn } = require("child_process");
 const expandHomeDir = require("expand-home-dir");
 
 function show_message(type, message) {
