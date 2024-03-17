@@ -19,10 +19,10 @@ function show_message(type, message) {
 function setup_precompiled_qemu(version) {
   show_message("info", `Downloading QEMU ${version}`);
   let triplet = "x86_64-linux-gnu";
-  let filename = `qemu-${triplet}.tar.gz`;
+  let filename = `qemu-${triplet}.tar.xz`;
   download_file(
     `https://github.com/cocoa-xu/qemu-build/releases/download/v${version}/${filename}`,
-    `/tmp/qemu-${version}-${triplet}.tar.gz`
+    `/tmp/qemu-${version}-${triplet}.tar.xz`
   );
 
   if (fs.existsSync(`/tmp/qemu-${version}/.extracted`)) {
@@ -35,7 +35,7 @@ function setup_precompiled_qemu(version) {
     "bash",
     [
       "-c",
-      `mkdir -p /tmp/qemu-${version} && tar -C /tmp/qemu-${version} -xzf /tmp/qemu-${version}-${triplet}.tar.gz && touch /tmp/qemu-${version}/.extracted`,
+      `mkdir -p /tmp/qemu-${version} && tar -C /tmp/qemu-${version} -xzf /tmp/qemu-${version}-${triplet}.tar.xz && touch /tmp/qemu-${version}/.extracted`,
     ],
     {
       stdio: "inherit",
