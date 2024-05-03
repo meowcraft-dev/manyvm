@@ -126,6 +126,8 @@ function ensure_host_ssh_key() {
       );
     }
   }
+  // properly set private key permissions
+  fs.chmodSync(privkey, 0o600);
   return pubkey;
 };
 
