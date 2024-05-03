@@ -31125,7 +31125,7 @@ function setup_sshkey(pubkey, qemu_process, ready_callback) {
     qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
     qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
     qemu_process.stdin.write(`cat /root/.ssh/authorized_keys`);
-  }, 3000);
+  }, 10000);
   setTimeout(() => { ready_callback(qemu_process) }, 2000);
   // let waitForKey = (() => {
   //   let concat = ''
