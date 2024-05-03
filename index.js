@@ -105,14 +105,14 @@ function download_file(url, filename) {
 };
 
 function ensure_host_ssh_key() {
-  const pubkeyPath = expandHomeDir("~/.ssh/id_rsa.pub");
-  const privkeyPath = expandHomeDir("~/.ssh/id_rsa");
-  if (fs.existsSync(pubkeyPath)) {
+  const pubkey = expandHomeDir("~/.ssh/id_rsa.pub");
+  const privkey = expandHomeDir("~/.ssh/id_rsa");
+  if (fs.existsSync(pubkey)) {
     show_message("info", "SSH key already exists, skipping.");
   } else {
     const result = spawnSync(
       "ssh-keygen",
-      ["-t", "rsa", "-N", "", "-f", privkeyPath],
+      ["-t", "rsa", "-N", "", "-f", privkey],
       {
         stdio: "inherit",
       }
@@ -126,7 +126,6 @@ function ensure_host_ssh_key() {
       );
     }
   }
-  const pubkey = fs.readFileSync(pubkeyPath, "utf8");
   return pubkey;
 };
 
