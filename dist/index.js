@@ -31099,9 +31099,9 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   show_message("info", qemu_executable + ' ' + qemu_args.join(' '));
 
   qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
+    setup_sshkey(pubkey, qemu_process);
     let runScript = core.getInput('run');
     fs.writeFileSync('/tmp/run.sh', runScript);
-    spawnSync('scp', ['-o', 'StrictHostKeyChecking=no', '-i', pubkey, '-p', '2222', '/tmp/run.sh', 'root@localhost:/tmp/run.sh']);
     let ssh = spawn('ssh', ['-vvv', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
     ssh.stdout.pipe(process.stdout);
     ssh.stderr.pipe(process.stderr);
@@ -31114,6 +31114,12 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   });
   core.endGroup();
 };
+
+function setup_sshkey(pubkey, qemu_process) {
+  show_message("info", "Setting up SSH key for QEMU");
+  qemu_process.stdin.write("root\n");
+  qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkey}"\n`);
+}
 
 function ensure_install_deps() {
   show_message("info", "Installing OVMF");
