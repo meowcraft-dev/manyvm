@@ -229,25 +229,24 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
 function setup_sshkey(pubkey, qemu_process, ready_callback) {
   const pubkeyContent = fs.readFileSync(pubkey, { encoding: "utf-8" });
   show_message("info", "Setting up SSH key for QEMU");
-  qemu_process.stdout.pipe(process.stdout); // let's see what's going on
   qemu_process.stdin.write("root\n");
-  setTimeout(() => {
-    qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
-    qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
-    qemu_process.stdin.write(`cat /root/.ssh/authorized_keys`);
-  }, 10000);
-  setTimeout(() => { ready_callback(qemu_process) }, 2000);
-  // let waitForKey = (() => {
-  //   let concat = ''
-  //   return (data) => {
-  //     concat += data.toString()
-  //     if (concat.includes(pubkeyContent)) {
-  //       ready_callback(qemu_process)
-  //       waitForKey = () => { }
-  //     }
-  //   }
-  // })()
-  // qemu_process.stdout.on('data', waitForKey);
+  let waitForKey = (() => {
+    let concat = ''
+    return (data) => {
+      concat += data.toString()
+      if (concat.includes("root@freebsd:")) {
+        qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
+        qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
+        qemu_process.stdin.write(`cat /root/.ssh/authorized_keys`);
+        setTimeout(() => { ready_callback(qemu_process) }, 2000);
+        waitForKey = () => { }
+      }
+    }
+  })()
+  qemu_process.stdout.on('data', (data) => {
+    waitForKey(data)
+    process.stdout.write(data.toString())
+  });
 }
 
 function ensure_install_deps() {
