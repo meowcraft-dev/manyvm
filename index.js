@@ -212,7 +212,7 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
     setup_sshkey(pubkey, qemu_process, () => {
       let runScript = core.getInput('run');
       fs.writeFileSync('/tmp/run.sh', runScript);
-      let ssh = spawn('ssh', ['-vvv', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
+      let ssh = spawn('ssh', ['-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
       ssh.stdout.pipe(process.stdout);
       ssh.stderr.pipe(process.stderr);
       ssh.stdin.write('chmod +x /tmp/run.sh');
@@ -231,8 +231,11 @@ function setup_sshkey(pubkey, qemu_process, ready_callback) {
   show_message("info", "Setting up SSH key for QEMU");
   qemu_process.stdout.pipe(process.stdout); // let's see what's going on
   qemu_process.stdin.write("root\n");
-  qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
-  qemu_process.stdin.write(`cat /root/.ssh/authorized_keys`);
+  setTimeout(() => {
+    qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
+    qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
+    qemu_process.stdin.write(`cat /root/.ssh/authorized_keys`);
+  }, 1000);
   setTimeout(() => { ready_callback(qemu_process) }, 2000);
   // let waitForKey = (() => {
   //   let concat = ''
