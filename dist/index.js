@@ -31126,8 +31126,8 @@ function setup_sshkey(pubkey, qemu_process, ready_callback) {
       concat += data.toString()
       if (concat.includes("root@freebsd:")) {
         qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
-        qemu_process.stdin.write("service ssh restart\n");
-        qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
+        qemu_process.stdin.write("/etc/rc.d/sshd restart\n");
+        qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`);
         qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`);
         setTimeout(() => { ready_callback(qemu_process) }, 2000);
         waitForKey = () => { }
