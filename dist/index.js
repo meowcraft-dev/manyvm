@@ -31025,16 +31025,10 @@ function qemu_wrapper(qemu_cmd, qemu_args, ready_callback) {
   show_message("info", 'starting qemu process with command: ' + qemu_cmd + ' ' + qemu_args.join(' '));
   const qemu_process = spawn(qemu_cmd, qemu_args);
 
-  let waitForLogin = (() => {
-      let concat = ''
-      return (data) => {
-          concat += data.toString()
-          if (concat.includes('login')) {
-            ready_callback(qemu_process)
-              waitForLogin = () => { }
-          }
-      }
-  })()
+  let waitForLogin = waitFor('login', () => {
+    ready_callback(qemu_process)
+    waitForLogin = () => { }
+  })
 
   qemu_process.stderr.pipe(process.stderr)
 
@@ -31104,7 +31098,7 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
     setup_sshkey(pubkey, qemu_process, () => {
       let runScript = core.getInput('run');
       fs.writeFileSync('/tmp/run.sh', runScript);
-      let ssh = spawn('ssh', ['-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
+      let ssh = spawnSync('ssh', ['-tt', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
       ssh.stdout.pipe(process.stdout);
       ssh.stderr.pipe(process.stderr);
       ssh.stdin.write('chmod +x /tmp/run.sh');
@@ -31118,26 +31112,34 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   core.endGroup();
 };
 
+function waitFor(trigger, callback) {
+  let concat = '';
+  let triggered = false;
+  return (data) => {
+    concat += data.toString()
+    if (!triggered && concat.includes(trigger)) {
+      triggered = true
+      callback()
+    }
+  }
+}
+
 function setup_sshkey(pubkey, qemu_process, ready_callback) {
   const pubkeyContent = fs.readFileSync(pubkey, { encoding: "utf-8" });
   show_message("info", "Setting up SSH key for QEMU");
   qemu_process.stdin.write("root\n");
-  let waitForKey = (() => {
-    let concat = ''
-    return (data) => {
-      concat += data.toString()
-      if (concat.includes("root@freebsd:")) {
-        qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
-        qemu_process.stdin.write("/etc/rc.d/sshd restart\n");
-        qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`);
-        qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`);
-        setTimeout(() => { ready_callback(qemu_process) }, 2000);
-        waitForKey = () => { }
-      }
-    }
-  })()
+  let waitForPrompt = waitFor("root@freebsd:", () => {
+    waitForPrompt = () => { }
+    qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
+    qemu_process.stdin.write("/etc/rc.d/sshd restart\n");
+    qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`);
+    qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`);
+    let waitForKey = waitFor(pubkeyContent, () => {
+      ready_callback(qemu_process)
+    })
+  })
   qemu_process.stdout.on('data', (data) => {
-    waitForKey(data)
+    waitForPrompt(data)
     process.stdout.write(data.toString())
   });
 }
