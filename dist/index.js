@@ -31099,28 +31099,41 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   show_message("info", qemu_executable + ' ' + qemu_args.join(' '));
 
   qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
-    setup_sshkey(pubkey, qemu_process);
-    let runScript = core.getInput('run');
-    fs.writeFileSync('/tmp/run.sh', runScript);
-    let ssh = spawn('ssh', ['-vvv', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
-    ssh.stdout.pipe(process.stdout);
-    ssh.stderr.pipe(process.stderr);
-    ssh.stdin.write('chmod +x /tmp/run.sh');
-    ssh.stdin.write('bash /tmp/run.sh');
-    ssh.on('close', (code) => {
-      show_message("info", `ssh exited with code ${code}`);
-      qemu_process.kill();
-    })
+    setup_sshkey(pubkey, qemu_process, () => {
+      let runScript = core.getInput('run');
+      fs.writeFileSync('/tmp/run.sh', runScript);
+      let ssh = spawn('ssh', ['-vvv', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
+      ssh.stdout.pipe(process.stdout);
+      ssh.stderr.pipe(process.stderr);
+      ssh.stdin.write('chmod +x /tmp/run.sh');
+      ssh.stdin.write('bash /tmp/run.sh');
+      ssh.on('close', (code) => {
+        show_message("info", `ssh exited with code ${code}`);
+        qemu_process.kill();
+      })
+    });
   });
   core.endGroup();
 };
 
-function setup_sshkey(pubkey, qemu_process) {
+function setup_sshkey(pubkey, qemu_process, ready_callback) {
   const pubkeyContent = fs.readFileSync(pubkey, { encoding: "utf-8" });
   show_message("info", "Setting up SSH key for QEMU");
   qemu_process.stdout.pipe(process.stdout); // let's see what's going on
   qemu_process.stdin.write("root\n");
   qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
+  qemu_process.stdin.write(`cat /root/.ssh/authorized_keys`);
+  let waitForKey = (() => {
+    let concat = ''
+    return (data) => {
+      concat += data.toString()
+      if (concat.includes(pubkeyContent)) {
+        ready_callback(qemu_process)
+        waitForKey = () => { }
+      }
+    }
+  })()
+  qemuProcess.stdout.on('data', waitForKey);
 }
 
 function ensure_install_deps() {
