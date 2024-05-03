@@ -226,9 +226,10 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
 };
 
 function setup_sshkey(pubkey, qemu_process) {
+  const pubkeyContent = fs.readFileSync(pubkey, { encoding: "utf-8" });
   show_message("info", "Setting up SSH key for QEMU");
   qemu_process.stdin.write("root\n");
-  qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkey}"\n`);
+  qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
 }
 
 function ensure_install_deps() {
