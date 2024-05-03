@@ -31123,17 +31123,18 @@ function setup_sshkey(pubkey, qemu_process, ready_callback) {
   qemu_process.stdin.write("root\n");
   qemu_process.stdin.write(`cat > /root/.ssh/authorized_keys <<<"${pubkeyContent}"\n`);
   qemu_process.stdin.write(`cat /root/.ssh/authorized_keys`);
-  let waitForKey = (() => {
-    let concat = ''
-    return (data) => {
-      concat += data.toString()
-      if (concat.includes(pubkeyContent)) {
-        ready_callback(qemu_process)
-        waitForKey = () => { }
-      }
-    }
-  })()
-  qemu_process.stdout.on('data', waitForKey);
+  setTimeout(() => { ready_callback(qemu_process) }, 2000);
+  // let waitForKey = (() => {
+  //   let concat = ''
+  //   return (data) => {
+  //     concat += data.toString()
+  //     if (concat.includes(pubkeyContent)) {
+  //       ready_callback(qemu_process)
+  //       waitForKey = () => { }
+  //     }
+  //   }
+  // })()
+  // qemu_process.stdout.on('data', waitForKey);
 }
 
 function ensure_install_deps() {
