@@ -241,13 +241,14 @@ function setup_sshkey(pubkey, qemu_process, ready_callback) {
   let waitForPrompt = waitFor("root@freebsd:", () => {
     waitForPrompt = () => { }
     let waitForKey = waitFor(pubkeyContent, () => {
+      show_message("info", "SSH key added successfully");
       ready_callback(qemu_process)
     })
     qemu_process.stdout.on('data', data => {
       process.stdout.write(data.toString())
       waitForKey(data)
     })
-
+    show_message("debug", "Writing to stdin")
     qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`);
     qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`);
     qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
