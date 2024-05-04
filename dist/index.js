@@ -31127,7 +31127,6 @@ function waitFor(trigger, callback) {
 function setup_sshkey(pubkey, qemu_process, ready_callback) {
   const pubkeyContent = fs.readFileSync(pubkey, { encoding: "utf-8" });
   show_message("info", "Setting up SSH key for QEMU");
-  qemu_process.stdin.write("root\n");
   let waitForPrompt = waitFor("root@freebsd:", () => {
     waitForPrompt = () => { }
     let waitForKey = waitFor(pubkeyContent, () => {
@@ -31139,18 +31138,17 @@ function setup_sshkey(pubkey, qemu_process, ready_callback) {
       waitForKey(data)
     })
     show_message("debug", "Writing to stdin")
-    qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`, () => {
-      qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`, () => {
-        qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n", () => {
-          qemu_process.stdin.write("/etc/rc.d/sshd restart\n");
-        });
-      });
-    });
+    // qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`, () => {
+    // qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`, () => {
+    qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n");
+    // });
+    // });
   })
   qemu_process.stdout.on('data', (data) => {
     waitForPrompt(data)
     process.stdout.write(data.toString())
   });
+  qemu_process.stdin.write("root\n");
 }
 
 function ensure_install_deps() {
