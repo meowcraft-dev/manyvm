@@ -31133,11 +31133,15 @@ function setup_sshkey(pubkey, qemu_process, ready_callback) {
     let waitForKey = waitFor(pubkeyContent, () => {
       ready_callback(qemu_process)
     })
-    qemu_process.stdout.on('data', waitForKey)
-    qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
-    qemu_process.stdin.write("/etc/rc.d/sshd restart\n");
+    qemu_process.stdout.on('data', data => {
+      process.stdout.write(data.toString())
+      waitForKey(data)
+    })
+
     qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`);
     qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`);
+    qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config\n");
+    qemu_process.stdin.write("/etc/rc.d/sshd restart\n");
   })
   qemu_process.stdout.on('data', (data) => {
     waitForPrompt(data)
