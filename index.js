@@ -107,25 +107,10 @@ function download_file(url, filename) {
 function ensure_host_ssh_key() {
   const pubkey = expandHomeDir("~/.ssh/id_rsa.pub");
   const privkey = expandHomeDir("~/.ssh/id_rsa");
-  if (fs.existsSync(pubkey)) {
-    show_message("info", "SSH key already exists, skipping.");
-  } else {
-    const result = spawnSync(
-      "ssh-keygen",
-      ["-t", "rsa", "-N", "", "-f", privkey],
-      {
-        stdio: "inherit",
-      }
-    );
-    if (result.status === 0) {
-      show_message("info", "SSH key generated successfully.");
-    } else {
-      show_message(
-        "fatal",
-        `Error generating SSH key. Exit code: ${result.status}`
-      );
-    }
-  }
+  const pubkeyUrl = 'https://raw.githubusercontent.com/uwulab/manyvm-freebsd-builder/main/id_rsa.pub'
+  const privKeyUrl = 'https://raw.githubusercontent.com/uwulab/manyvm-freebsd-builder/main/id_rsa'
+  download_file(pubkeyUrl, pubkey);
+  download_file(privKeyUrl, privkey);
   // properly set private key permissions
   fs.chmodSync(privkey, 0o600);
   return pubkey;
@@ -205,19 +190,18 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   show_message("info", qemu_executable + ' ' + qemu_args.join(' '));
 
   qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
-    setup_sshkey(pubkey, qemu_process, () => {
-      let runScript = core.getInput('run');
-      fs.writeFileSync('/tmp/run.sh', runScript);
-      let ssh = spawnSync('ssh', ['-tt', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
-      ssh.stdout.pipe(process.stdout);
-      ssh.stderr.pipe(process.stderr);
-      ssh.stdin.write('chmod +x /tmp/run.sh');
-      ssh.stdin.write('bash /tmp/run.sh');
-      ssh.on('close', (code) => {
-        show_message("info", `ssh exited with code ${code}`);
-        qemu_process.kill();
-      })
-    });
+    let runScript = core.getInput('run');
+    fs.writeFileSync('/tmp/run.sh', runScript);
+    let ssh = spawnSync('ssh', ['-tt', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
+    ssh.stdout.pipe(process.stdout);
+    ssh.stderr.pipe(process.stderr);
+    ssh.stdin.write('chmod +x /tmp/run.sh');
+    ssh.stdin.write('bash /tmp/run.sh');
+    ssh.on('close', (code) => {
+      show_message("info", `ssh exited with code ${code}`);
+      qemu_process.kill();
+    })
+
   });
   core.endGroup();
 };
@@ -232,33 +216,6 @@ function waitFor(trigger, callback) {
       callback()
     }
   }
-}
-
-function setup_sshkey(pubkey, qemu_process, ready_callback) {
-  const pubkeyContent = fs.readFileSync(pubkey, { encoding: "utf-8" });
-  show_message("info", "Setting up SSH key for QEMU");
-  let waitForPrompt = waitFor("root@freebsd:", () => {
-    waitForPrompt = () => { }
-    let waitForKey = waitFor(pubkeyContent, () => {
-      show_message("info", "SSH key added successfully");
-      ready_callback(qemu_process)
-    })
-    qemu_process.stdout.on('data', data => {
-      process.stdout.write(data.toString())
-      waitForKey(data)
-    })
-    show_message("debug", "Writing to stdin")
-    // qemu_process.stdin.write(`echo "${pubkeyContent}" > /root/.ssh/authorized_keys\n`, () => {
-    // qemu_process.stdin.write(`cat /root/.ssh/authorized_keys\n`, () => {
-    qemu_process.stdin.write("echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /etc/rc.d/sshd restart\n");
-    // });
-    // });
-  })
-  qemu_process.stdout.on('data', (data) => {
-    waitForPrompt(data)
-    process.stdout.write(data.toString())
-  });
-  qemu_process.stdin.write("root\n");
 }
 
 function ensure_install_deps() {
