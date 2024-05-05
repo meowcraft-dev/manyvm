@@ -30981,6 +30981,7 @@ function download_file(url, filename) {
     return;
   }
 
+  fs.mkdirSync(path.dirname(filename), { recursive: true });
   const result = spawnSync("curl", ["-fSL", url, "-o", filename], {
     stdio: "inherit",
   });
