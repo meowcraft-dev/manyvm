@@ -31004,6 +31004,7 @@ function ensure_host_ssh_key() {
   download_file(privKeyUrl, privkey);
   // properly set private key permissions
   fs.chmodSync(privkey, 0o600);
+  fs.chmodSync(pubkey, 0o600);
   return pubkey;
 };
 
