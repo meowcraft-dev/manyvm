@@ -31083,9 +31083,7 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
     let runScript = core.getInput('run');
     fs.writeFileSync('/tmp/run.sh', runScript);
-    let ssh = spawnSync('ssh', ['-tt', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost']);
-    ssh.stdout.pipe(process.stdout);
-    ssh.stderr.pipe(process.stderr);
+    let ssh = spawnSync('ssh', ['-tt', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey, 'root@localhost'], { stdio: ['inherit', 'pipe', 'pipe'] });
     ssh.stdin.write('chmod +x /tmp/run.sh');
     ssh.stdin.write('bash /tmp/run.sh');
     ssh.on('close', (code) => {
