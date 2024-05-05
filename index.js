@@ -194,7 +194,8 @@ function start_vm(qemu_version, os, cpu, arch, bios, machine, filename, pubkey) 
   qemu_wrapper(qemu_executable, qemu_args, (qemu_process) => {
     let runScript = core.getInput('run');
     fs.writeFileSync('/tmp/run.sh', runScript);
-    let scp = spawnSync('scp', ['-v', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey.replace('.pub', ''), '/tmp/run.sh', 'root@localhost:/tmp/run.sh'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let scp = spawnSync('scp', ['-v', '-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey.replace('.pub', ''), '/tmp/run.sh', 'root@localhost:/tmp/run.sh'], { stdio: 'pipe' });
+    show_message("info", `${scp.output}`);
     show_message("info", `scp exited with code ${scp.status}`);
     let ssh = spawn('ssh', ['-o', 'StrictHostKeyChecking=no', '-p', '2222', '-i', pubkey.replace('.pub', ''), 'root@localhost'],);
     ssh.stdout.pipe(process.stdout);
